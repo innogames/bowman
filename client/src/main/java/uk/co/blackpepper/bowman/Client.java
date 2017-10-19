@@ -15,17 +15,27 @@
  */
 package uk.co.blackpepper.bowman;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URI;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
 import org.springframework.web.util.UriComponentsBuilder;
 
+import uk.co.blackpepper.bowman.annotation.LinkedResource;
 import uk.co.blackpepper.bowman.annotation.RemoteResource;
 
+import static uk.co.blackpepper.bowman.HalSupport.toLinkName;
+import static uk.co.blackpepper.bowman.ReflectionSupport.getAssociationsURIs;
 import static uk.co.blackpepper.bowman.ReflectionSupport.getId;
+import static uk.co.blackpepper.bowman.ReflectionSupport.getMethodsAnnotatedWith;
+import static uk.co.blackpepper.bowman.ReflectionSupport.getRelName;
+import static uk.co.blackpepper.bowman.ReflectionSupport.getResourcePath;
 import static uk.co.blackpepper.bowman.ReflectionSupport.setId;
 
 /**
@@ -127,6 +137,14 @@ public class Client<T> {
 	 */
 	public void put(T object) {
 		restOperations.putObject(getId(object), object);
+		
+		Map<String, List<URI>> associations = getAssociationsURIs(object);
+		
+		for (Map.Entry<String, List<URI>> association : associations.entrySet()) {
+			restOperations.putAssociation(getEntityAssociationBaseUri(association.getKey()),
+				association.getValue().toArray(new URI[associations.size()]));
+		}
+		
 	}
 
 	/**
@@ -137,10 +155,12 @@ public class Client<T> {
 	public void delete(URI uri) {
 		restOperations.deleteResource(uri);
 	}
+	
+	private URI getEntityAssociationBaseUri(String name) {
+		return UriComponentsBuilder.fromUri(baseUri).path(getResourcePath(entityType) + "/" + name).build().toUri();
+	}
 
 	private URI getEntityBaseUri() {
-		String path = entityType.getAnnotation(RemoteResource.class).value();
-		
-		return UriComponentsBuilder.fromUri(baseUri).path(path).build().toUri();
+		return UriComponentsBuilder.fromUri(baseUri).path(getResourcePath(entityType)).build().toUri();
 	}
 }

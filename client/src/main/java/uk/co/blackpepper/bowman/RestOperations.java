@@ -15,11 +15,19 @@
  */
 package uk.co.blackpepper.bowman;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.net.URI;
+import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
+import java.util.List;
 
 import org.springframework.hateoas.Resource;
 import org.springframework.hateoas.Resources;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpMethod;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestTemplate;
@@ -84,6 +92,20 @@ class RestOperations {
 	
 	public void putObject(URI uri, Object object) {
 		restTemplate.put(uri, object);
+	}
+	
+	public void putAssociation(URI uri, URI... associations) {
+		HttpHeaders requestHeaders = new HttpHeaders();
+		requestHeaders.add("Content-type", "text/uri-list");
+		
+		StringBuilder builder = new StringBuilder();
+		
+		for (URI associated : associations) {
+			builder.append(associated.toString());
+			builder.append("\n");
+		}
+		
+		restTemplate.exchange(uri, HttpMethod.PUT, new HttpEntity<>(builder.toString(), requestHeaders), String.class);
 	}
 	
 	public void deleteResource(URI uri) {
